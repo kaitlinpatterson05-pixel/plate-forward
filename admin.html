@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Plate Forward Bookings</title>
+<meta name="robots" content="noindex">
+<style>
+:root{--green:#1F6257;--deep:#174C43;--orange:#E0772D}
+*{box-sizing:border-box}
+body{margin:0;background:var(--green);color:#fff;font:15px/1.5 Inter,system-ui,sans-serif;padding:24px max(18px,env(safe-area-inset-left))}
+.wrap{max-width:900px;margin:0 auto;display:grid;gap:16px}
+h1{font-weight:400;margin:0}
+form{display:flex;gap:10px;flex-wrap:wrap}
+input{flex:1;min-width:200px;padding:10px;border-radius:3px;border:0;font:inherit}
+button{padding:10px 16px;border:0;border-radius:3px;background:var(--orange);color:#fff;font:inherit;cursor:pointer}
+.tbl{overflow-x:auto;background:var(--deep);border-radius:4px}
+table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid rgba(255,255,255,.15);white-space:nowrap}
+.muted{opacity:.75}
+</style></head><body>
+<div class="wrap">
+  <h1>Plate Forward bookings</h1>
+  <p class="muted">Only for you. Type the admin key you set in Netlify.</p>
+  <form id="f"><input id="k" type="password" placeholder="Admin key" autocomplete="current-password"><button>Show bookings</button></form>
+  <p id="msg"></p>
+  <div class="tbl"><table><thead><tr><th>Booked on</th><th>Light that day</th><th>Shift date</th><th>Time</th><th>Email</th></tr></thead><tbody id="rows"></tbody></table></div>
+  <button id="copy" type="button" hidden>Copy all emails</button>
+</div>
+<script>
+const fmtHour=h=>`${h%12||12}:00 ${h<12?"am":"pm"}`;
+let emails=[];
+document.getElementById("f").onsubmit=async e=>{
+  e.preventDefault();
+  const msg=document.getElementById("msg"), rows=document.getElementById("rows");
+  msg.textContent="Loading…"; rows.innerHTML="";
+  const r=await fetch("/api/admin?key="+encodeURIComponent(document.getElementById("k").value));
+  const d=await r.json().catch(()=>({}));
+  if(!r.ok){ msg.textContent=d.error||"Couldn't load bookings."; return; }
+  msg.textContent=d.bookings.length+" bookings";
+  emails=[...new Set(d.bookings.map(b=>b.email))];
+  d.bookings.forEach(b=>{
+    const tr=document.createElement("tr");
+    [new Date(b.at).toLocaleString("en-AU",{timeZone:"Australia/Melbourne"}), b.light??"–", b.date, `${fmtHour(b.hour)} – ${fmtHour(b.hour+1)}`, b.email]
+      .forEach(t=>{const td=document.createElement("td");td.textContent=t;tr.appendChild(td);});
+    rows.appendChild(tr);
+  });
+  document.getElementById("copy").hidden=!emails.length;
+};
+document.getElementById("copy").onclick=async e=>{
+  try{await navigator.clipboard.writeText(emails.join(", "));e.target.textContent="Copied";}catch{e.target.textContent="Copy didn't work, select them in the table";}
+};
+</script>
+</body></html>
