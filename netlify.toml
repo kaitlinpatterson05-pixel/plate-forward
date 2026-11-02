@@ -1,3 +1,8 @@
 [build]
-  publish = "public"
+  publish = "."
   functions = "netlify/functions"
+
+[[redirects]]
+  from = "/img/*"
+  to = "/:splat"
+  status = 200
